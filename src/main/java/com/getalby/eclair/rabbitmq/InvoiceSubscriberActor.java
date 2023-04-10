@@ -16,11 +16,10 @@ public class InvoiceSubscriberActor extends AbstractActor {
 
     private final LoggingAdapter logger = Logging.getLogger(getContext().getSystem(), this);
     private final Gson gson = new GsonBuilder()
-            .setPrettyPrinting()
             .disableHtmlEscaping()
             .create();
 
-    private Channel channel;
+    private final Channel channel;
 
     private InvoiceSubscriberActor(Channel channel) {
         this.channel = channel;

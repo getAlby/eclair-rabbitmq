@@ -14,11 +14,10 @@ public class RabbitMQPlugin implements Plugin {
 
     @Override
     public void onSetup(Setup setup) {
-        System.out.println("YEEET");
     }
 
     @Override
     public void onKit(Kit kit) {
-        System.out.println("YEEET");
+        kit.system().actorOf(InvoiceSubscriberActor.props());
     }
 }

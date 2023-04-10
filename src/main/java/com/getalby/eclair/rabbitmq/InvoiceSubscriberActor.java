@@ -6,10 +6,11 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
+import fr.acinq.eclair.payment.PaymentEvent;
 import fr.acinq.eclair.payment.PaymentReceived;
-import fr.acinq.eclair.payment.PaymentSent;
 
 public class InvoiceSubscriberActor extends AbstractActor {
 
@@ -33,20 +34,31 @@ public class InvoiceSubscriberActor extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .matchAny(event -> {
-                    final Invoice invoice = new Invoice((PaymentReceived) event);
-                    final String payload = gson.toJson(invoice);
+                    if (event instanceof PaymentReceived) {
+                        final PaymentReceived payment = (PaymentReceived) event;
 
-                    try {
-                        this.channel.basicPublish(
-                                "lnd_invoice",
-                                "invoice.incoming.settled",
-                                new AMQP.BasicProperties.Builder()
-                                        .contentType("application/json")
-                                        .build(),
-                                payload.getBytes()
-                        );
-                    } catch (Exception e) {
-                        logger.error(e.getMessage());
+                        final JsonObject payload = new JsonObject();
+                        payload.addProperty("r_hash", payment.paymentHash().bytes().toBase64());
+                        payload.addProperty("amt_paid_sat", payment.amount().toLong() / 1000L);
+                        payload.addProperty("settled", true);
+                        payload.addProperty("is_key_send", false);
+                        payload.addProperty("state", 1);
+                        payload.addProperty("settle_date", payment.timestamp().toLong());
+
+                        logger.info(payload.toString());
+
+                        try {
+                            this.channel.basicPublish(
+                                    "lnd_invoice",
+                                    "invoice.incoming.settled",
+                                    new AMQP.BasicProperties.Builder()
+                                            .contentType("application/json")
+                                            .build(),
+                                    gson.toJson(payload).getBytes()
+                            );
+                        } catch (Exception e) {
+                            logger.error(e.getMessage());
+                        }
                     }
                 })
                 .build();
@@ -57,7 +69,7 @@ public class InvoiceSubscriberActor extends AbstractActor {
         getContext()
                 .getSystem()
                 .eventStream()
-                .subscribe(getSelf(), PaymentReceived.class);
+                .subscribe(getSelf(), PaymentEvent.class);
     }
 
     @Override

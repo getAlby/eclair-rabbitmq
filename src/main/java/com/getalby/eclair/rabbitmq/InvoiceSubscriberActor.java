@@ -42,7 +42,7 @@ public class InvoiceSubscriberActor extends AbstractActor {
                         payload.addProperty("settled", true);
                         payload.addProperty("is_key_send", false);
                         payload.addProperty("state", 1);
-                        payload.addProperty("settle_date", payment.timestamp().toLong());
+                        payload.addProperty("settle_date", payment.timestamp().toLong() / 1000L );
 
                         logger.info(payload.toString());
 
